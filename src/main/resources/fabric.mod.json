@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "id": "nauq",
+  "version": "1.0.0",
+  "name": "Nauq",
+  "description": "Elytra + fisek sirasinda otomatik slot degisimi ve kritik netherite kilic vurusu.",
+  "environment": "client",
+  "entrypoints": { "client": ["net.nauq.NauqClient"] },
+  "mixins": ["nauq.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=1.21 <=1.21.8",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "net.nauq.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": ["PlayerInventoryAccessor"],
+  "injectors": { "defaultRequire": 1 }
+}
