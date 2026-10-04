@@ -36,6 +36,7 @@ public class NauqClient implements ClientModInitializer {
 
     private static boolean lastUse = false;
     private static int armed = 0, fwSlot = -1, sinceHit = 99;
+    private static int phase = 0, wait = 0, backSlot = -1; // 0 bos, 1 kilicta bekle, 2 vurduktan sonra bekle
 
     private static KeyBinding toggleKey, soundKey, cycleKey, configKey;
 
@@ -83,6 +84,34 @@ public class NauqClient implements ClientModInitializer {
 
         sinceHit++;
 
+        // Yavas slot degisimi: kilica gec -> bekle -> vur -> bekle -> geri don
+        if (phase != 0) {
+            if (!NauqConfig.enabled || !p.isFallFlying()) {   // iptal, geri don
+                slotOf(p, backSlot);
+                phase = 0;
+                return;
+            }
+            if (--wait > 0) return;
+            if (phase == 1) {
+                Entity t = mc.targetedEntity;
+                if (t instanceof LivingEntity le && le.isAlive() && le.isAttackable() && canCrit(p)) {
+                    mc.interactionManager.attackEntity(p, t);
+                    p.swingHand(Hand.MAIN_HAND);
+                    sinceHit = 0;
+                    play(mc, 1.1f, false);
+                    phase = 2;
+                    wait = NauqConfig.SLOT_DELAYS[NauqConfig.slotIdx];
+                } else {                                      // kritik sarti bozuldu, vurmadan don
+                    slotOf(p, backSlot);
+                    phase = 0;
+                }
+            } else {
+                slotOf(p, backSlot);
+                phase = 0;
+            }
+            return;
+        }
+
         // Fisek kullanimi algila (tus basma kenari)
         boolean use = mc.options.useKey.isPressed();
         if (NauqConfig.enabled && use && !lastUse && p.isFallFlying()
@@ -109,13 +138,10 @@ public class NauqClient implements ClientModInitializer {
         int sword = findSword(p);
         if (sword < 0) return;
 
-        int back = fwSlot >= 0 ? fwSlot : slot(p);
+        backSlot = fwSlot >= 0 ? fwSlot : slot(p);
         slotOf(p, sword);               // kilica gec (fisekle vurmaz)
-        mc.interactionManager.attackEntity(p, t);            // kilicla vur
-        p.swingHand(Hand.MAIN_HAND);
-        slotOf(p, back);                // fisek slotuna don
-        sinceHit = 0;
-        play(mc, 1.1f, false);
+        phase = 1;
+        wait = NauqConfig.SLOT_DELAYS[NauqConfig.slotIdx];
     }
 
     private static int slot(ClientPlayerEntity p) {
@@ -166,4 +192,4 @@ public class NauqClient implements ClientModInitializer {
         if (!NauqConfig.sound && !force) return;
         mc.getSoundManager().play(PositionedSoundInstance.master(SOUNDS[NauqConfig.soundIdx % SOUNDS.length], pitch, VOLUME));
     }
-            }
+}
