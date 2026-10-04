@@ -3,6 +3,7 @@ package net.nauq;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.MappingResolver;
+import net.nauq.mixin.PlayerInventoryAccessor;
 import java.lang.reflect.Field;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -23,16 +24,18 @@ import org.lwjgl.glfw.GLFW;
 
 public class NauqClient implements ClientModInitializer {
     // Rahatlatici, orta seviye sesler
-    private static final SoundEvent[] SOUNDS = {
+    public static final SoundEvent[] SOUNDS = {
         SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME,
         SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE,
         SoundEvents.ENTITY_ALLAY_ITEM_GIVEN,
         SoundEvents.ENTITY_EXPERIENCE_ORB_PICKUP
     };
     private static final float VOLUME = 0.55f;   // orta
-    private static final float SWORD_FULL_TICKS = 12.5f; // netherite kilic tam sarj suresi (tick)
+    private static final int ARM_TICKS = 25;     // fisekten sonra aktif pencere
+    private static final float SWORD_FULL_TICKS = 12.5f; // netherite kilic tam sarj ~12.5 tick
 
-    private static int sinceHit = 99;
+    private static boolean lastUse = false;
+    private static int armed = 0, fwSlot = -1, sinceHit = 99;
 
     private static KeyBinding toggleKey, soundKey, cycleKey, configKey;
 
@@ -59,10 +62,11 @@ public class NauqClient implements ClientModInitializer {
             mc.setScreen(new NauqScreen(null));
         }
         while (toggleKey.wasPressed()) {
-            NauqConfig.autoHit = !NauqConfig.autoHit;
+            NauqConfig.enabled = !NauqConfig.enabled;
             NauqConfig.save();
-            p.sendMessage(Text.literal("Nauq oto vurma: " + (NauqConfig.autoHit ? "ACIK" : "KAPALI")), true);
-            play(mc, NauqConfig.autoHit ? 1.3f : 0.8f, false);
+            armed = 0;
+            p.sendMessage(Text.literal("Nauq: " + (NauqConfig.enabled ? "ACIK" : "KAPALI")), true);
+            play(mc, NauqConfig.enabled ? 1.3f : 0.8f, false);
         }
         while (soundKey.wasPressed()) {
             NauqConfig.sound = !NauqConfig.sound;
@@ -79,13 +83,20 @@ public class NauqClient implements ClientModInitializer {
 
         sinceHit++;
 
-        if (!NauqConfig.autoHit) return;
+        // Fisek kullanimi algila (tus basma kenari)
+        boolean use = mc.options.useKey.isPressed();
+        if (NauqConfig.enabled && use && !lastUse && p.isFallFlying()
+                && p.getMainHandStack().isOf(Items.FIREWORK_ROCKET)) {
+            armed = ARM_TICKS;
+            fwSlot = slot(p);
+        }
+        lastUse = use;
+
+        if (!NauqConfig.enabled || armed <= 0) return;
+        armed--;
         if (!p.isFallFlying()) return;
 
-        // Sadece kilic elindeyken vur (fisek elindeyken vurma)
-        if (!p.getMainHandStack().isOf(Items.NETHERITE_SWORD)) return;
-
-        // Kilic bari esik kadar dolmadan vurma (ardarda hizli vurusu engeller)
+        // Kilic bari esik kadar dolmadan vurma (ardarda hizli vurmasin)
         if ((sinceHit + 0.5f) / SWORD_FULL_TICKS < NauqConfig.critThreshold) return;
 
         // Hitbox kontrolu: crosshair'in hedefi
@@ -95,10 +106,24 @@ public class NauqClient implements ClientModInitializer {
         // Sadece kritik atabiliyorsa vur
         if (!canCrit(p)) return;
 
-        mc.interactionManager.attackEntity(p, t);
+        int sword = findSword(p);
+        if (sword < 0) return;
+
+        int back = fwSlot >= 0 ? fwSlot : slot(p);
+        slotOf(p, sword);               // kilica gec (fisekle vurmaz)
+        mc.interactionManager.attackEntity(p, t);            // kilicla vur
         p.swingHand(Hand.MAIN_HAND);
+        slotOf(p, back);                // fisek slotuna don
         sinceHit = 0;
         play(mc, 1.1f, false);
+    }
+
+    private static int slot(ClientPlayerEntity p) {
+        return ((PlayerInventoryAccessor) p.getInventory()).nauq$getSelectedSlot();
+    }
+
+    private static void slotOf(ClientPlayerEntity p, int s) {
+        ((PlayerInventoryAccessor) p.getInventory()).nauq$setSelectedSlot(s);
     }
 
     // fallDistance: 1.21.0-1.21.1 float, sonrasi double. Intermediary adiyla bulunur.
@@ -131,8 +156,14 @@ public class NauqClient implements ClientModInitializer {
             && !p.hasVehicle() && !p.isSprinting();
     }
 
+    private static int findSword(ClientPlayerEntity p) {
+        for (int i = 0; i < 9; i++)
+            if (p.getInventory().getStack(i).isOf(Items.NETHERITE_SWORD)) return i;
+        return -1;
+    }
+
     private static void play(MinecraftClient mc, float pitch, boolean force) {
         if (!NauqConfig.sound && !force) return;
         mc.getSoundManager().play(PositionedSoundInstance.master(SOUNDS[NauqConfig.soundIdx % SOUNDS.length], pitch, VOLUME));
     }
-}
+            }
