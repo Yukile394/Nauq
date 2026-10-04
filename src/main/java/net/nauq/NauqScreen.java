@@ -14,6 +14,7 @@ public class NauqScreen extends Screen {
     }
 
     private static String onOff(boolean b) { return b ? "ACIK" : "KAPALI"; }
+    private static String slotLabel() { return "Slot hizi: " + NauqConfig.SLOT_NAMES[NauqConfig.slotIdx]; }
     private static String pct() { return Math.round(NauqConfig.critThreshold * 100) + "%"; }
 
     @Override
@@ -36,20 +37,26 @@ public class NauqScreen extends Screen {
             b.setMessage(Text.literal("Vurus esigi: " + pct()));
         }).dimensions(x, y + 24, 200, 20).build());
 
+        // Slot degisim hizi (kilica gecis / geri donus arasi bekleme)
+        addDrawableChild(ButtonWidget.builder(Text.literal(slotLabel()), b -> {
+            NauqConfig.slotIdx = (NauqConfig.slotIdx + 1) % NauqConfig.SLOT_DELAYS.length;
+            b.setMessage(Text.literal(slotLabel()));
+        }).dimensions(x, y + 48, 200, 20).build());
+
         // Ses ac/kapa
         addDrawableChild(ButtonWidget.builder(Text.literal("Ses: " + onOff(NauqConfig.sound)), b -> {
             NauqConfig.sound = !NauqConfig.sound;
             b.setMessage(Text.literal("Ses: " + onOff(NauqConfig.sound)));
-        }).dimensions(x, y + 48, 200, 20).build());
+        }).dimensions(x, y + 72, 200, 20).build());
 
         // Ses secimi
         addDrawableChild(ButtonWidget.builder(Text.literal(soundLabel()), b -> {
             NauqConfig.soundIdx = (NauqConfig.soundIdx + 1) % NauqClient.SOUNDS.length;
             b.setMessage(Text.literal(soundLabel()));
-        }).dimensions(x, y + 72, 200, 20).build());
+        }).dimensions(x, y + 96, 200, 20).build());
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Bitti"), b -> close())
-            .dimensions(x, y + 104, 200, 20).build());
+            .dimensions(x, y + 128, 200, 20).build());
     }
 
     private static String soundLabel() {
