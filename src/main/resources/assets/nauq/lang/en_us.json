@@ -1,6 +1,7 @@
 {
   "category.nauq": "Nauq",
-  "key.nauq.toggle": "Nauq ac/kapa",
+  "key.nauq.toggle": "Nauq oto vurma ac/kapa",
   "key.nauq.sound": "Nauq ses ac/kapa",
-  "key.nauq.cycle": "Nauq ses degistir"
+  "key.nauq.cycle": "Nauq ses degistir",
+  "key.nauq.config": "Nauq ayar menusu"
 }
