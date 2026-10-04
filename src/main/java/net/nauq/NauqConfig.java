@@ -10,6 +10,10 @@ import java.util.Properties;
 public class NauqConfig {
     public static final float[] THRESHOLDS = {0.80f, 0.85f, 0.90f, 0.95f, 1.00f};
 
+    public static final int[] SLOT_DELAYS = {2, 3, 5, 8};            // tick
+    public static final String[] SLOT_NAMES = {"Hizli", "Normal", "Yavas", "Cok yavas"};
+    public static int slotIdx = 1;                                    // slot degisim hizi (varsayilan Normal)
+
     public static boolean enabled = false;   // mod ana ac/kapa (R tusu)
     public static boolean sound = true;      // ses ac/kapa
     public static int soundIdx = 0;          // ses secimi
@@ -28,6 +32,7 @@ public class NauqConfig {
             enabled = Boolean.parseBoolean(p.getProperty("enabled", "false"));
             sound = Boolean.parseBoolean(p.getProperty("sound", "true"));
             soundIdx = Math.max(0, Integer.parseInt(p.getProperty("soundIdx", "0")));
+            slotIdx = Math.min(SLOT_DELAYS.length - 1, Math.max(0, Integer.parseInt(p.getProperty("slotIdx", "1"))));
             critThreshold = Float.parseFloat(p.getProperty("critThreshold", "0.90"));
         } catch (Throwable ignored) {}
     }
@@ -38,6 +43,7 @@ public class NauqConfig {
             p.setProperty("enabled", String.valueOf(enabled));
             p.setProperty("sound", String.valueOf(sound));
             p.setProperty("soundIdx", String.valueOf(soundIdx));
+            p.setProperty("slotIdx", String.valueOf(slotIdx));
             p.setProperty("critThreshold", String.valueOf(critThreshold));
             p.store(out, "Nauq config");
         } catch (Throwable ignored) {}
